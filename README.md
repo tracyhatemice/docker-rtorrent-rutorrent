@@ -1,10 +1,8 @@
-<p align="center"><a href="https://github.com/crazy-max/docker-rtorrent-rutorrent" target="_blank"><img height="128" src="https://raw.githubusercontent.com/crazy-max/docker-rtorrent-rutorrent/master/.github/docker-rtorrent-rutorrent.jpg"></a></p>
+<p align="center"><a href="https://github.com/tracyhatemice/docker-rtorrent-rutorrent" target="_blank"><img height="128" src="https://raw.githubusercontent.com/tracyhatemice/docker-rtorrent-rutorrent/master/.github/docker-rtorrent-rutorrent.jpg"></a></p>
 
 <p align="center">
-  <a href="https://hub.docker.com/r/crazymax/rtorrent-rutorrent/tags?page=1&ordering=last_updated"><img src="https://img.shields.io/github/v/tag/crazy-max/docker-rtorrent-rutorrent?label=version&style=flat-square" alt="Latest Version"></a>
-  <a href="https://github.com/crazy-max/docker-rtorrent-rutorrent/actions?workflow=build"><img src="https://img.shields.io/github/actions/workflow/status/crazy-max/docker-rtorrent-rutorrent/build.yml?branch=master&label=build&logo=github&style=flat-square" alt="Build Status"></a>
-  <a href="https://hub.docker.com/r/crazymax/rtorrent-rutorrent/"><img src="https://img.shields.io/docker/stars/crazymax/rtorrent-rutorrent.svg?style=flat-square&logo=docker" alt="Docker Stars"></a>
-  <a href="https://hub.docker.com/r/crazymax/rtorrent-rutorrent/"><img src="https://img.shields.io/docker/pulls/crazymax/rtorrent-rutorrent.svg?style=flat-square&logo=docker" alt="Docker Pulls"></a>
+  <a href="https://github.com/tracyhatemice/docker-rtorrent-rutorrent/pkgs/container/rtorrent-rutorrent"><img src="https://img.shields.io/github/v/tag/tracyhatemice/docker-rtorrent-rutorrent?label=version&style=flat-square" alt="Latest Version"></a>
+  <a href="https://github.com/tracyhatemice/docker-rtorrent-rutorrent/actions?workflow=build"><img src="https://img.shields.io/github/actions/workflow/status/tracyhatemice/docker-rtorrent-rutorrent/build.yml?branch=master&label=build&logo=github&style=flat-square" alt="Build Status"></a>
   <br /><a href="https://github.com/sponsors/crazy-max"><img src="https://img.shields.io/badge/sponsor-crazy--max-181717.svg?logo=github&style=flat-square" alt="Become a sponsor"></a>
   <a href="https://www.paypal.me/crazyws"><img src="https://img.shields.io/badge/donate-paypal-00457c.svg?logo=paypal&style=flat-square" alt="Donate Paypal"></a>
 </p>
@@ -13,6 +11,16 @@
 
 [rTorrent](https://github.com/rakshasa/rtorrent) with [ruTorrent](https://github.com/Novik/ruTorrent)
 Docker image.
+
+> [!NOTE]
+> This is a fork of [crazy-max/docker-rtorrent-rutorrent](https://github.com/crazy-max/docker-rtorrent-rutorrent)
+> published as `ghcr.io/tracyhatemice/rtorrent-rutorrent`. It differs from upstream in:
+>
+> * Volumes: `/config` holds rTorrent / ruTorrent config (upstream `/data`), `/data` holds downloads (upstream `/downloads`)
+> * rTorrent layout under `/data/misc/`: in progress `temp/`, completed `incoming/`, watch dir `watched/`
+> * Incoming port defaults to `51413` (upstream `50000`)
+> * DHT disabled and move-on-complete turned off in the default `.rtorrent.rc`
+> * WebDAV bound to localhost only, XMLRPC also listens on IPv6
 
 > [!TIP] 
 > Want to be notified of new releases? Check out 🔔 [Diun (Docker Image Update Notifier)](https://github.com/crazy-max/diun)
@@ -71,7 +79,7 @@ ___
 ## Build locally
 
 ```shell
-git clone https://github.com/crazy-max/docker-rtorrent-rutorrent.git
+git clone https://github.com/tracyhatemice/docker-rtorrent-rutorrent.git
 cd docker-rtorrent-rutorrent
 
 # Build image and output to docker (default)
@@ -86,15 +94,14 @@ docker buildx bake image-all
 
 ## Image
 
-| Registry                                                                                                      | Image                                   |
-|---------------------------------------------------------------------------------------------------------------|-----------------------------------------|
-| [Docker Hub](https://hub.docker.com/r/crazymax/rtorrent-rutorrent/)                                           | `crazymax/rtorrent-rutorrent`           |
-| [GitHub Container Registry](https://github.com/users/crazy-max/packages/container/package/rtorrent-rutorrent) | `ghcr.io/crazy-max/rtorrent-rutorrent`  |
+| Registry                                                                                                      | Image                                       |
+|---------------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| [GitHub Container Registry](https://github.com/tracyhatemice/docker-rtorrent-rutorrent/pkgs/container/rtorrent-rutorrent) | `ghcr.io/tracyhatemice/rtorrent-rutorrent`  |
 
 Following platforms for this image are available:
 
 ```
-$ docker buildx imagetools inspect crazymax/rtorrent-rutorrent --format "{{json .Manifest}}" | \
+$ docker buildx imagetools inspect ghcr.io/tracyhatemice/rtorrent-rutorrent --format "{{json .Manifest}}" | \
   jq -r '.manifests[] | select(.platform.os != null and .platform.os != "unknown") | .platform | "\(.os)/\(.architecture)\(if .variant then "/" + .variant else "" end)"'
 
 linux/amd64
@@ -103,6 +110,12 @@ linux/arm/v7
 linux/arm64
 ```
 
+Images are built by the [build workflow](.github/workflows/build.yml) and only
+pushed to GHCR:
+
+* Push to `master`: `edge` tag
+* Push a git tag `<rutorrent>-<rtorrent>-r<N>` (e.g. `5.3.18-0.16.25-r0`):
+  `5.3.18-0.16.25` and `latest` tags
 
 ## Environment variables
 
@@ -135,13 +148,13 @@ linux/arm64
 ### rTorrent
 
 * `RT_LOG_LEVEL`: rTorrent log level (default `info`)
-* `RT_LOG_EXECUTE`: Log executed commands to `/data/rtorrent/log/execute.log` (default `false`)
-* `RT_LOG_XMLRPC`: Log XMLRPC queries to `/data/rtorrent/log/xmlrpc.log` (default `false`)
+* `RT_LOG_EXECUTE`: Log executed commands to `/config/rtorrent/log/execute.log` (default `false`)
+* `RT_LOG_XMLRPC`: Log XMLRPC queries to `/config/rtorrent/log/xmlrpc.log` (default `false`)
 * `RT_SESSION_SAVE_SECONDS`: Seconds between writing torrent information to disk (default `3600`)
 * `RT_SESSION_FDATASYNC`: Force fdatasync when saving sessions (`system.files.session.fdatasync.set`, default `false`)
 * `RT_TRACKER_DELAY_SCRAPE`: Delay tracker announces at startup (default `true`)
 * `RT_DHT_PORT`: DHT UDP port (`dht.override_port.set`, default `6881`)
-* `RT_INC_PORT`: Incoming connections (`network.listen.port.range.set`, default `50000`)
+* `RT_INC_PORT`: Incoming connections (`network.listen.port.range.set`, default `51413`)
 * `RT_SEND_BUFFER_SIZE`: Sets default tcp wmem value (`network.send_buffer.size.set`, default `4M`)
 * `RT_RECEIVE_BUFFER_SIZE`: Sets default tcp rmem value (`network.receive_buffer.size.set`, default `4M`)
 * `RT_PREALLOCATE_TYPE`: Sets the type of [disk space preallocation](#rtorrent-disk-space-preallocation) (default `0`)
@@ -160,19 +173,19 @@ linux/arm64
 * `RU_PHP_USE_GZIP`: Use PHP Gzip compression (default `false`)
 * `RU_PHP_GZIP_LEVEL`: PHP Gzip compression level (default `2`)
 * `RU_SCHEDULE_RAND`: Rand for schedulers start, +0..X seconds (default `10`)
-* `RU_LOG_FILE`: ruTorrent log file path for errors messages (default `/data/rutorrent/rutorrent.log`)
+* `RU_LOG_FILE`: ruTorrent log file path for errors messages (default `/config/rutorrent/rutorrent.log`)
 * `RU_DO_DIAGNOSTIC`: ruTorrent diagnostics like permission checking (default `true`)
 * `RU_CACHED_PLUGIN_LOADING`: Set to `true` to enable rapid cached loading of ruTorrent plugins (default `false`)
 * `RU_PLUGIN_MINIFICATION`: Set to `false` to disable plugins minification (default `true`)
-* `RU_SAVE_UPLOADED_TORRENTS`: Save torrents files added wia ruTorrent in `/data/rutorrent/share/torrents` (default `true`)
+* `RU_SAVE_UPLOADED_TORRENTS`: Save torrents files added wia ruTorrent in `/config/rutorrent/share/torrents` (default `true`)
 * `RU_OVERWRITE_UPLOADED_TORRENTS`: Existing .torrent files will be overwritten (default `false`)
 * `RU_FORBID_USER_SETTINGS`: If true, allows for single user style configuration, even with webauth (default `false`)
 * `RU_LOCALE`: Set default locale for ruTorrent (default `UTF8`)
 
 ## Volumes
 
-* `/data`: rTorrent / ruTorrent config, session files, log, ...
-* `/downloads`: Downloaded files
+* `/config`: rTorrent / ruTorrent config, session files, log, ...
+* `/data`: Downloaded files
 * `/passwd`: Contains htpasswd files for basic auth
 
 > [!WARNING]
@@ -186,7 +199,7 @@ linux/arm64
 * `8000` (or `XMLRPC_PORT`): XMLRPC port through nginx over SCGI socket
 * `8080` (or `RUTORRENT_PORT`): ruTorrent HTTP port
 * `9000` (or `WEBDAV_PORT`): WebDAV port on completed downloads
-* `50000` (or `RT_INC_PORT`): Incoming connections (`network.listen.port.range.set`)
+* `51413` (or `RT_INC_PORT`): Incoming connections (`network.listen.port.range.set`)
 
 > [!WARNING]
 > Port p+1 defined for `XMLRPC_PORT`, `RUTORRENT_PORT` and `WEBDAV_PORT` will
@@ -203,8 +216,8 @@ your host for example. Edit the compose file with your preferences and run the
 following command:
 
 ```shell
-mkdir data downloads passwd
-chown ${PUID}:${PGID} data downloads passwd
+mkdir config data passwd
+chown ${PUID}:${PGID} config data passwd
 docker compose up -d
 docker compose logs -f
 ```
@@ -214,8 +227,8 @@ docker compose logs -f
 You can also use the following minimal command:
 
 ```shell
-mkdir data downloads passwd
-chown ${PUID}:${PGID} data downloads passwd
+mkdir config data passwd
+chown ${PUID}:${PGID} config data passwd
 docker run -d --name rtorrent_rutorrent \
   --ulimit nproc=65535 \
   --ulimit nofile=32000:40000 \
@@ -223,11 +236,11 @@ docker run -d --name rtorrent_rutorrent \
   -p 8000:8000 \
   -p 8080:8080 \
   -p 9000:9000 \
-  -p 50000:50000 \
+  -p 51413:51413 \
+  -v $(pwd)/config:/config \
   -v $(pwd)/data:/data \
-  -v $(pwd)/downloads:/downloads \
   -v $(pwd)/passwd:/passwd \
-  crazymax/rtorrent-rutorrent:latest
+  ghcr.io/tracyhatemice/rtorrent-rutorrent:latest
 ```
 
 ## Notes
@@ -242,8 +255,8 @@ with his password. See below to populate this file with a user / password.
 
 ### WebDAV
 
-WebDAV allows you to retrieve your completed torrent files in `/downloads/complete`
-on port `9000`. Like XMLRPC, these requests can be secured with basic authentication
+WebDAV allows you to retrieve your completed torrent files in `/data/misc/incoming`
+on port `9000` (bound to localhost only in this fork). Like XMLRPC, these requests can be secured with basic authentication
 through the `/passwd/webdav.htpasswd` file in which you will need to add a
 username with his password. See below to populate this file with a user / password.
 
@@ -279,22 +292,22 @@ properties of this file:
 
 * `system.daemon.set = true`: Launcher rTorrent as a daemon
 * A config layout for the rTorrent's instance you can use in your `.rtorrent.rc`:
-  * `cfg.basedir`: Home directory of rtorrent (`/data/rtorrent/`)
-  * `cfg.download`: Download directory (`/downloads/`)
-  * `cfg.download_complete`: Completed downloads (`/downloads/complete/`)
-  * `cfg.download_temp`:  Downloads in progress (`/downloads/temp/`)
-  * `cfg.logs`: Logs directory (`/data/rtorrent/log/`)
-  * `cfg.session`: Session directory (`/data/rtorrent/.session/`)
-  * `cfg.watch`: Watch directory for torrents (`/data/rtorrent/watch/`)
+  * `cfg.basedir`: Home directory of rtorrent (`/config/rtorrent/`)
+  * `cfg.download`: Download directory (`/data/misc/`)
+  * `cfg.download_complete`: Completed downloads (`/data/misc/incoming/`)
+  * `cfg.download_temp`:  Downloads in progress (`/data/misc/temp/`)
+  * `cfg.logs`: Logs directory (`/config/rtorrent/log/`)
+  * `cfg.session`: Session directory (`/config/rtorrent/.session/`)
+  * `cfg.watch`: Watch directory for torrents (`/data/misc/watched/`)
   * `cfg.rundir`: Runtime data of rtorrent (`/var/run/rtorrent/`)
 * `d.data_path`: Config var to get the full path of data of a torrent (workaround for the possibly empty `d.base_path` attribute)
 * `directory.default.set`: Default directory to save the downloaded torrents (`cfg.download_temp`)
 * `session.path.set`: Default session directory (`cfg.session`)
 * PID file to `/var/run/rtorrent/rtorrent.pid`
 * `network.scgi.open_local`: SCGI local socket and make it group-writable and secure
-* `network.listen.port.range.set`: Listening port for incoming peer traffic (`50000-50000`)
+* `network.listen.port.range.set`: Listening port for incoming peer traffic (`51413-51413`)
 * `dht.override_port.set`: UDP port to use for DHT (`6881`)
-* `log.open_file`: Default logging to `/data/rtorrent/log/rtorrent.log`
+* `log.open_file`: Default logging to `/config/rtorrent/log/rtorrent.log`
   * Log level can be modified with the environment variable `RT_LOG_LEVEL`
   * `rpc_events` are logged be default
   * To log executed commands, add the environment variable `RT_LOG_EXECUTE`
@@ -302,9 +315,9 @@ properties of this file:
 
 ### Override or add a ruTorrent plugin/theme
 
-You can add a plugin for ruTorrent in `/data/rutorrent/plugins/`. If you add a
+You can add a plugin for ruTorrent in `/config/rutorrent/plugins/`. If you add a
 plugin that already exists in ruTorrent, it will be removed from ruTorrent core
-plugins and yours will be used. And you can also add a theme in `/data/rutorrent/themes/`.
+plugins and yours will be used. And you can also add a theme in `/config/rutorrent/themes/`.
 The same principle as for plugins will be used if you want to override one.
 
 > [!WARNING]
@@ -315,9 +328,9 @@ The same principle as for plugins will be used if you want to override one.
 As you probably know, plugin configuration is not outsourced in ruTorrent.
 Loading the configuration of a plugin is done via a `conf.php` file placed at
 the root of the plugin folder. To solve this issue with Docker, a special folder
-has been created in `/data/rutorrent/plugins-conf` to allow you to configure
+has been created in `/config/rutorrent/plugins-conf` to allow you to configure
 plugins. For example to configure the `diskspace` plugin, you will need to create
-the `/data/rutorrent/plugins-conf/diskspace.php` file with your configuration:
+the `/config/rutorrent/plugins-conf/diskspace.php` file with your configuration:
 
 ```php
 <?php

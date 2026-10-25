@@ -2,7 +2,7 @@ name: rtorrent-rutorrent
 
 services:
   rtorrent-rutorrent:
-    image: ${RTORRENT_RUTORRENT_IMAGE:-crazymax/rtorrent-rutorrent}
+    image: ${RTORRENT_RUTORRENT_IMAGE:-ghcr.io/tracyhatemice/rtorrent-rutorrent}
     container_name: ${RTORRENT_RUTORRENT_CONTAINER:-rtorrent-rutorrent}
     networks:
       - rtorrent-rutorrent
@@ -29,8 +29,8 @@ services:
       - "rtorrent-rutorrent.env"
       - ".env"
     volumes:
+      - "rtorrent-rutorrent-config:/config"
       - "rtorrent-rutorrent-data:/data"
-      - "rtorrent-rutorrent-downloads:/downloads"
       - "rtorrent-rutorrent-passwd:/passwd"
     ulimits:
       nproc: 65535
@@ -40,8 +40,8 @@ services:
     restart: always
 
 volumes:
+  rtorrent-rutorrent-config:
   rtorrent-rutorrent-data:
-  rtorrent-rutorrent-downloads:
   rtorrent-rutorrent-passwd:
 
 networks:

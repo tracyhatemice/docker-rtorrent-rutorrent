@@ -2,4 +2,4 @@
 with-contenv
 s6-setuidgid rtorrent
 pipeline -w { s6-log -b "p[rtorrent-xmlrpc]" 1 }
-tail -F /data/rtorrent/log/xmlrpc.log
+tail -F /config/rtorrent/log/xmlrpc.log
