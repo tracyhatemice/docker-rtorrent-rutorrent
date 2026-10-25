@@ -7,13 +7,13 @@ services:
     networks:
       - rtorrent-rutorrent
     volumes:
-      - "./data/geoip:/data"
+      - "./config/geoip:/data"
     env_file:
       - "./geoip-updater.env"
     restart: always
 
   rtorrent-rutorrent:
-    image: crazymax/rtorrent-rutorrent:latest
+    image: ghcr.io/tracyhatemice/rtorrent-rutorrent:latest
     container_name: rtorrent-rutorrent
     networks:
       - rtorrent-rutorrent
@@ -40,8 +40,8 @@ services:
       - "rtorrent-rutorrent.env"
       - ".env"
     volumes:
+      - "./config:/config"
       - "./data:/data"
-      - "./downloads:/downloads"
       - "./passwd:/passwd"
     ulimits:
       nproc: 65535
