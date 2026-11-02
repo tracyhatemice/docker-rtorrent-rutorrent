@@ -1,0 +1,118 @@
+name: storage-cleanup
+
+# Keeps the GHCR package and the workflow artifacts from growing without bound.
+#
+# Images. Every build pushes a multi-platform image with attestations and
+# signatures. Rebuilding edge (each push to master and the scheduled build) or
+# re-releasing a version (5.3.18-0.16.25 from -r1, then -r2) leaves the previous
+# image untagged, and its signature tags (sha256-<digest>) behind. Every tagged
+# image is kept, so each release stays pullable for a rollback. Untagged images
+# are deleted together with their per-platform manifests and attestations, and
+# signature tags once the image they sign is gone. Deleted versions can be
+# restored for 30 days through the REST API; the log prints each one's ID.
+#
+# Artifacts. Builds upload their build records (.dockerbuild). Those of a
+# successful run are deleted; a failed or cancelled run keeps them for
+# debugging until they expire.
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+on:
+  # After each build that may have pushed, so not after pull requests. Each run
+  # sweeps everything eligible, so one that fails is caught up by the next.
+  workflow_run: # zizmor: ignore[dangerous-triggers] nothing from the triggering run is checked out or evaluated
+    workflows:
+      - build
+    types:
+      - completed
+  # By hand, a dry run unless unticked.
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Only log what would be deleted'
+        type: boolean
+        default: true
+
+jobs:
+  artifacts:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # to read runs and delete artifacts
+    steps:
+      -
+        name: Delete artifacts of successful runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+        run: |
+          set -euo pipefail
+
+          # Listed in full before anything is deleted, so a deletion cannot
+          # shift the pages still to be read.
+          list="$RUNNER_TEMP/artifacts.tsv"
+          gh api "repos/$REPO/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired | not) | [.id, .name, .size_in_bytes, .workflow_run.id] | @tsv' \
+            > "$list"
+
+          # Each run's conclusion, looked up once per run. A run still in
+          # progress has a null conclusion and keeps its artifacts, as does one
+          # that can no longer be looked up.
+          declare -A conclusion
+          deleted=0 kept=0 freed=0
+          while IFS=$'\t' read -r id name size run; do
+            if [ -n "$run" ] && [ -z "${conclusion[$run]+set}" ]; then
+              conclusion[$run]="$(gh api "repos/$REPO/actions/runs/$run" --jq '.conclusion' 2>/dev/null || echo unknown)"
+            fi
+            if [ -z "$run" ] || [ "${conclusion[$run]}" != success ]; then
+              kept=$((kept + 1))
+              continue
+            fi
+            if [ "$DRY_RUN" = true ]; then
+              echo "would delete $name ($size bytes) from run $run"
+            else
+              gh api -X DELETE "repos/$REPO/actions/artifacts/$id"
+              echo "deleted $name ($size bytes) from run $run"
+            fi
+            deleted=$((deleted + 1))
+            freed=$((freed + size))
+          done < "$list"
+
+          verb=$([ "$DRY_RUN" = true ] && echo "Would delete" || echo "Deleted")
+          summary="$verb $deleted artifacts ($((freed / 1048576)) MB); kept $kept."
+          echo "$summary"
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
+
+  images:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write # to delete package versions
+    steps:
+      # If deleting fails with a permission error, grant this repository the
+      # Admin role under the package's Manage Actions access.
+      -
+        name: Delete untagged and orphaned images
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          package: rtorrent-rutorrent
+          delete-untagged: true
+          # Signature and attestation tags whose image is gone.
+          delete-orphaned-images: true
+          # Multi-platform images left broken by a cancelled push.
+          delete-ghost-images: true
+          delete-partial-images: true
+          # A release pushes from two builds at once (master and the tag), and
+          # the first to finish starts this cleanup. Leave alone anything the
+          # other may still be pushing: its platform manifests exist, untagged,
+          # for a while before the index that tags them.
+          older-than: 1 hour
+          # Automatic runs delete; a manual run is a dry run unless unticked.
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+          # Report any multi-platform image left with missing platforms.
+          validate: true
